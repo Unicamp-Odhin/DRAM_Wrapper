@@ -77,7 +77,20 @@ module top #(
         .ddram_we_n           (ddram_we_n)                    // 1 bit                    // 1 bit
     );
 
+    typedef enum logic [2:0] {
+        TST_IDLE,
+        TST_WRITE,
+        TST_WAIT_WRITE,
+        TST_READ,
+        TST_WAIT_READ,
+        TST_CHECK
+    } test_state_t;
+
+    test_state_t test_state;
+    logic [15:0] delay_counter;
+    logic pass, fail;
+
     assign addr = {real_addr, 7'h0};
-    assign led  = {7'h0, initialized};
+    assign led  = {pass, fail, 3'h0, 2'b11, initialized};
 
 endmodule
