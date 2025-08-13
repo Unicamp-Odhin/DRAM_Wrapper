@@ -76,3 +76,7 @@ old
 clockInfo.txt
 env/
 fpga/opensourceSDRLabKintex7/openFPGALoader
+fpga/opensourceSDRLabKintex7/vivado.jou
+fpga/opensourceSDRLabKintex7/vivado.log
+fpga/opensourceSDRLabKintex7/ip/clk_wiz_0/doc/clk_wiz_v6_0_changelog.txt
+fpga/opensourceSDRLabKintex7/tight_setup_hold_pins.txt

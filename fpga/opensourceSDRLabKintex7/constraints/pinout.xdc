@@ -26,21 +26,6 @@ set_property PACKAGE_PIN D24 [get_ports {led[5]}]
 set_property PACKAGE_PIN D25 [get_ports {led[6]}]
 set_property PACKAGE_PIN E25 [get_ports {led[7]}]
 
-# SPI
-
-set_property -dict { PACKAGE_PIN A14   IOSTANDARD LVCMOS33 } [get_ports { mosi }];
-set_property -dict { PACKAGE_PIN D14   IOSTANDARD LVCMOS33 } [get_ports { miso }];
-set_property -dict { PACKAGE_PIN B12   IOSTANDARD LVCMOS33 } [get_ports { sck }];
-set_property -dict { PACKAGE_PIN C14   IOSTANDARD LVCMOS33 } [get_ports { cs }];
-set_property -dict { PACKAGE_PIN B14   IOSTANDARD LVCMOS33 } [get_ports { spi_rst }];
-
-# I2S
-
-set_property -dict { PACKAGE_PIN H12   IOSTANDARD LVCMOS33 } [get_ports { i2s_ws }]; 
-set_property -dict { PACKAGE_PIN F12   IOSTANDARD LVCMOS33 } [get_ports { i2s_sd }];
-set_property -dict { PACKAGE_PIN F14   IOSTANDARD LVCMOS33 } [get_ports { i2s_lr }];
-set_property -dict { PACKAGE_PIN F13   IOSTANDARD LVCMOS33 } [get_ports { i2s_clk }];
-
 # UART Pins
 #set_property IOSTANDARD LVCMOS33 [get_ports rxd]
 #set_property IOSTANDARD LVCMOS33 [get_ports txd]

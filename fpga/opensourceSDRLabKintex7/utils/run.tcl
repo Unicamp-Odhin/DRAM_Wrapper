@@ -1,5 +1,6 @@
 read_verilog -sv main.sv
-read_verilog -sv ddr3_init.sv
+read_verilog -sv ../../rtl/wrapper.sv
+read_verilog -sv ../../rtl/async_fifo.sv
 
 set_msg_config -id {Common 17-55} -new_severity {Warning}
 
