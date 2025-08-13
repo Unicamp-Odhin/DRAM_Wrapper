@@ -77,7 +77,7 @@ module top #(
         .ddram_we_n           (ddram_we_n)                    // 1 bit                    // 1 bit
     );
 
-    typedef enum logic [2:0] {
+    typedef enum logic [2:0] {TST_WAIT_READ
         TST_IDLE,
         TST_WRITE,
         TST_WAIT_WRITE,
@@ -89,6 +89,85 @@ module top #(
     test_state_t test_state;
     logic [15:0] delay_counter;
     logic pass, fail;
+
+    localparam NUM_BYTES = WORD_SIZE / 8;
+
+    localparam TEST_VALUE = {NUM_BYTES{8'b10100101}}; // Padrão A5 repetido
+    localparam logic [127:0] TEST_VALUE1 = {32{8'hA5}};
+    localparam logic [127:0] TEST_VALUE2 = {32{8'h5A}};
+    localparam logic [127:0] TEST_VALUE3 = {32{8'hFF}};
+    localparam logic [127:0] TEST_VALUE4 = {32{8'h00}};
+    localparam logic [127:0] TEST_VALUE5 = {32{8'hF0}};
+    localparam logic [127:0] TEST_VALUE6 = {32{8'h0F}};
+    localparam logic [127:0] TEST_VALUE7 = {32{8'hAA}};
+    localparam logic [127:0] TEST_VALUE8 = {32{8'h55}};
+    localparam logic [127:0] TEST_VALUE9 = 256'hAABB_CCDD_EEFF_0011_2233_4455_6677_8899_AABB_CCDD_EEFF_0011_2233_4455_6677_8899;
+
+    logic [WORD_SIZE - 1 : 0] test_data;
+
+    always_ff @( posedge  clk ) begin
+        if(!rst_n) begin
+            cyc  <= 0;
+            stb  <= 0;
+            pass <= 0;
+            fail <= 0;
+            we   <= 0;
+        end else begin
+            case (test_state)
+                TST_IDLE: begin
+                    if(initialized) test_state <= TST_WRITE;
+                end 
+
+                TST_WRITE: begin
+                    real_addr  <= 0;
+                    cyc        <= 1;
+                    stb        <= 1;
+                    we         <= 1;
+                    write_data <= TEST_VALUE9;
+                    test_state <= TST_WAIT_WRITE;
+                    test_data  <= 0;
+                end
+
+                TST_WAIT_WRITE: begin
+                    if(ack) begin
+                        test_state <= TST_READ;
+                        we         <= 1'b0;
+                        cyc        <= 1'b0;
+                        stb        <= 1'b0;
+                    end
+                end
+
+                TST_READ: begin
+                    we         <= 1'b0;
+                    cyc        <= 1'b1;
+                    stb        <= 1'b1;
+                    test_state <= TST_WAIT_READ;
+                end
+
+                TST_WAIT_READ: begin
+                    if(ack) begin
+                        test_state <= TST_CHECK;
+                        we         <= 1'b0;
+                        cyc        <= 1'b0;
+                        stb        <= 1'b0;
+                        test_data  <= read_data;
+                    end
+                end
+
+                TST_CHECK: begin
+                    if(test_data == TEST_VALUE9) begin
+                        pass <= 1'b1;
+                        fail <= 1'b0;
+                    end else begin
+                        pass <= 1'b0;
+                        fail <= 1'b1;
+                    end
+                end
+
+                default: test_state <= TST_IDLE;
+            endcase
+        end
+    end
 
     assign addr = {real_addr, 7'h0};
     assign led  = {pass, fail, 3'h0, 2'b11, initialized};
