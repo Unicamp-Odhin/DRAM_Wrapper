@@ -150,45 +150,37 @@ module Wrapper #(
         //WB_WAIT
     } wb_state_t;
     
-    wb_state_t wb_state, wb_next;
+    wb_state_t req_state;
 
-    always_ff @(posedge user_clk) begin
-        if (!rst_n) wb_state <= WB_IDLE;
-        else        wb_state <= wb_next;
-    end
+    always_ff @(posedge sys_clk) begin
+        req_fifo_wr_en  <= 0;
+        resp_fifo_rd_en <= 0;
+        ack_o           <= 0;
 
-    always_comb begin
-        wb_next         = wb_state;
-        req_fifo_wr_en  = 0;
-        req_fifo_wdata  = '{default:0};
-        resp_fifo_rd_en = 0;
-        ack_o           = 0;
-        data_o          = 0;
-
-        case (wb_state)
-            WB_IDLE: begin
-                if (cyc_i && stb_i && !req_fifo_full) begin
-                    wb_next        = WB_ACK;
-                    req_fifo_wdata = '{we: we_i, addr: addr_i, data: data_i};
-                    req_fifo_wr_en = 1;
-                end;
-            end
-
-            WB_ACK: begin
-                if (!resp_fifo_empty) begin
-                    resp_fifo_rd_en = 1;
-                    wb_next         = WB_IDLE;
-                    ack_o           = 1;
-                    data_o          = resp_fifo_rdata.data;
-                    //if (!(cyc_i && stb_i)) wb_next = WB_IDLE;
-                    //else wb_next = WB_WAIT;
-                    wb_next = WB_IDLE;
+        if(!rst_n) begin
+            req_state <= WB_IDLE;
+        end else begin
+            case (req_state)
+                WB_IDLE: begin
+                    if (cyc_i && stb_i && !req_fifo_full) begin
+                        req_state      <= WB_ACK;
+                        req_fifo_wdata <= '{we: we_i, addr: addr_i, data: data_i};
+                        req_fifo_wr_en <= 1;
+                    end;
                 end
-            end
-            // WB_WAIT: if (!(cyc_i && stb_i)) wb_next = WB_IDLE;
 
-            default: wb_next = WB_IDLE;
-        endcase
+                WB_ACK: begin
+                    if (!resp_fifo_empty) begin
+                        resp_fifo_rd_en <= 1;
+                        req_state       <= WB_IDLE;
+                        ack_o           <= 1;
+                        data_o          <= resp_fifo_rdata.data;
+                    end
+                end
+
+                default: req_state <= WB_IDLE;
+            endcase
+        end
     end
 
     typedef enum logic [0:0] {
@@ -200,26 +192,23 @@ module Wrapper #(
 
     logic [WORD_SIZE-1:0] ddram_data_out;
 
-    always_ff @( posedge sys_clk ) begin
-        resp_fifo_wr_en          <= 1'b0;
-        req_fifo_rd_en           <= 1'b0;
-        user_port_wishbone_0_sel <= 32'hFFFFFFFF;
+    always_ff @( posedge user_clk ) begin
+        resp_fifo_wr_en <= 1'b0;
+        req_fifo_rd_en  <= 1'b0;
 
         if(user_rst) begin
             lite_dram_state          <= IDLE;
             user_port_wishbone_0_cyc <= 0;
             user_port_wishbone_0_stb <= 0;
-            user_port_wishbone_0_adr <= 0;
             user_port_wishbone_0_we  <= 0;
-            user_port_wishbone_0_sel <= 32'hFFFFFFFF;
         end else begin
             case (lite_dram_state)
                 IDLE: begin
-                    if(!req_fifo_empty) begin
+                    if(!req_fifo_empty && initialized) begin
                         req_fifo_rd_en             <= 1'b1;
                         user_port_wishbone_0_we    <= req_fifo_rdata.we;
-                        user_port_wishbone_0_cyc   <= 1'b0;
-                        user_port_wishbone_0_stb   <= 1'b0;
+                        user_port_wishbone_0_cyc   <= 1'b1;
+                        user_port_wishbone_0_stb   <= 1'b1;
                         user_port_wishbone_0_adr   <= req_fifo_rdata.addr[31:7];
                         user_port_wishbone_0_dat_w <= req_fifo_rdata.data;
                         lite_dram_state            <= REQUEST;
@@ -243,5 +232,6 @@ module Wrapper #(
     end
 
     assign initialized = ddram_init_done && !ddram_init_error;
+    assign user_port_wishbone_0_sel = 32'hFFFFFFFF;
 
 endmodule

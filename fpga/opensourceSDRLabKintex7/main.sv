@@ -74,10 +74,10 @@ module top #(
         .ddram_odt            (ddram_odt),                     // 1 bit
         .ddram_ras_n          (ddram_ras_n),                   // 1 bit
         .ddram_reset_n        (ddram_reset_n),                 // 1 bit
-        .ddram_we_n           (ddram_we_n)                    // 1 bit                    // 1 bit
+        .ddram_we_n           (ddram_we_n)                     // 1 bit
     );
 
-    typedef enum logic [2:0] {TST_WAIT_READ
+    typedef enum logic [2:0] {
         TST_IDLE,
         TST_WRITE,
         TST_WAIT_WRITE,
@@ -105,7 +105,7 @@ module top #(
 
     logic [WORD_SIZE - 1 : 0] test_data;
 
-    always_ff @( posedge  clk ) begin
+    always_ff @( posedge  sys_clk_100mhz ) begin
         if(!rst_n) begin
             cyc  <= 0;
             stb  <= 0;
