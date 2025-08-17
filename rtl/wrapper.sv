@@ -39,7 +39,7 @@ module Wrapper #(
     // Control signals
     logic ddram_init_done;
     logic ddram_init_error;
-    logic dram_pll_locked;
+    logic ddram_pll_locked;
 
     // User port signals
     logic user_rst;
@@ -77,7 +77,7 @@ module Wrapper #(
         .ddram_we_n                 (ddram_we_n),                    // 1 bit
         .init_done                  (ddram_init_done),               // 1 bit
         .init_error                 (ddram_init_error),              // 1 bit
-        .pll_locked                 (dram_pll_locked),               // 1 bit
+        .pll_locked                 (ddram_pll_locked),               // 1 bit
         
         .user_clk                   (user_clk),                      // 1 bit
         .user_port_wishbone_0_ack   (user_port_wishbone_0_ack),      // 1 bit
@@ -144,15 +144,15 @@ module Wrapper #(
     );
 
     // FSM - Wishbone
-    typedef enum logic [0:0] { 
+    typedef enum logic [1:0] { 
         WB_IDLE,
-        WB_ACK//,
-        //WB_WAIT
+        WB_ACK,
+        WB_WBACK
     } wb_state_t;
     
     wb_state_t req_state;
 
-    always_ff @(posedge sys_clk) begin
+    always_ff @(posedge sys_clk or negedge rst_n ) begin
         req_fifo_wr_en  <= 0;
         resp_fifo_rd_en <= 0;
         ack_o           <= 0;
@@ -172,10 +172,14 @@ module Wrapper #(
                 WB_ACK: begin
                     if (!resp_fifo_empty) begin
                         resp_fifo_rd_en <= 1;
-                        req_state       <= WB_IDLE;
-                        ack_o           <= 1;
-                        data_o          <= resp_fifo_rdata.data;
+                        req_state       <= WB_WBACK;
                     end
+                end
+
+                WB_WBACK: begin
+                    ack_o     <= 1;
+                    data_o    <= resp_fifo_rdata.data;
+                    req_state <= WB_IDLE;
                 end
 
                 default: req_state <= WB_IDLE;
@@ -183,8 +187,9 @@ module Wrapper #(
         end
     end
 
-    typedef enum logic [0:0] {
+    typedef enum logic [1:0] {
         IDLE,
+        READ,
         REQUEST
     } lite_dram_state_t;
 
@@ -192,7 +197,7 @@ module Wrapper #(
 
     logic [WORD_SIZE-1:0] ddram_data_out;
 
-    always_ff @( posedge user_clk ) begin
+    always_ff @( posedge user_clk or posedge user_rst ) begin
         resp_fifo_wr_en <= 1'b0;
         req_fifo_rd_en  <= 1'b0;
 
@@ -206,13 +211,17 @@ module Wrapper #(
                 IDLE: begin
                     if(!req_fifo_empty && initialized) begin
                         req_fifo_rd_en             <= 1'b1;
-                        user_port_wishbone_0_we    <= req_fifo_rdata.we;
-                        user_port_wishbone_0_cyc   <= 1'b1;
-                        user_port_wishbone_0_stb   <= 1'b1;
-                        user_port_wishbone_0_adr   <= req_fifo_rdata.addr[31:7];
-                        user_port_wishbone_0_dat_w <= req_fifo_rdata.data;
-                        lite_dram_state            <= REQUEST;
+                        lite_dram_state            <= READ;
                     end
+                end
+
+                READ: begin
+                    user_port_wishbone_0_we    <= req_fifo_rdata.we;
+                    user_port_wishbone_0_cyc   <= 1'b1;
+                    user_port_wishbone_0_stb   <= 1'b1;
+                    user_port_wishbone_0_adr   <= req_fifo_rdata.addr[31:7];
+                    user_port_wishbone_0_dat_w <= req_fifo_rdata.data;
+                    lite_dram_state            <= REQUEST;
                 end
 
                 REQUEST: begin
@@ -231,7 +240,7 @@ module Wrapper #(
         end
     end
 
-    assign initialized = ddram_init_done && !ddram_init_error;
+    assign initialized = ddram_init_done & ~ddram_init_error & ddram_pll_locked;
     assign user_port_wishbone_0_sel = 32'hFFFFFFFF;
 
 endmodule

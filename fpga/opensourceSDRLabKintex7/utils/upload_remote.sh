@@ -8,7 +8,7 @@ fi
 
 # Variáveis de configuração
 REMOTE_USER="julio"
-REMOTE_HOST="100.82.191.95"
+REMOTE_HOST="100.124.75.44"
 REMOTE_PORT="22"  # Porta SSH padrão
 TUNNEL_PORT="20000"
 BITSTREAM_FILE=$nome_do_arquivo

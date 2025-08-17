@@ -80,6 +80,7 @@ module top #(
     typedef enum logic [2:0] {
         TST_IDLE,
         TST_WRITE,
+        TST_DELAY,
         TST_WAIT_WRITE,
         TST_READ,
         TST_WAIT_READ,
@@ -87,7 +88,7 @@ module top #(
     } test_state_t;
 
     test_state_t test_state;
-    logic [15:0] delay_counter;
+    logic [31:0] delay_counter;
     logic pass, fail;
 
     localparam NUM_BYTES = WORD_SIZE / 8;
@@ -105,18 +106,28 @@ module top #(
 
     logic [WORD_SIZE - 1 : 0] test_data;
 
-    always_ff @( posedge  sys_clk_100mhz ) begin
+    always_ff @( posedge  sys_clk_100mhz or negedge rst_n ) begin
         if(!rst_n) begin
             cyc  <= 0;
             stb  <= 0;
             pass <= 0;
             fail <= 0;
             we   <= 0;
+            delay_counter <= 0;
+            test_state <= TST_DELAY;
         end else begin
             case (test_state)
                 TST_IDLE: begin
-                    if(initialized) test_state <= TST_WRITE;
-                end 
+                    if(initialized) test_state <= TST_DELAY;
+                end
+
+                TST_DELAY: begin
+                    if(delay_counter < 1000_000_000) begin
+                        delay_counter <= delay_counter + 1;
+                    end else begin
+                        test_state <= TST_WRITE;
+                    end
+                end
 
                 TST_WRITE: begin
                     real_addr  <= 0;
