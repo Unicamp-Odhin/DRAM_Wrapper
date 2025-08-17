@@ -158,6 +158,7 @@ module Wrapper #(
     typedef enum logic [1:0] { 
         WB_IDLE,
         WB_ACK,
+        WB_WAIT,
         WB_WBACK
     } wb_state_t;
     
@@ -183,8 +184,12 @@ module Wrapper #(
                 WB_ACK: begin
                     if (!resp_fifo_empty) begin
                         resp_fifo_rd_en <= 1;
-                        req_state       <= WB_WBACK;
+                        req_state       <= WB_WAIT;
                     end
+                end
+
+                WB_WAIT: begin
+                    req_state <= WB_WBACK;
                 end
 
                 WB_WBACK: begin
@@ -201,6 +206,7 @@ module Wrapper #(
     typedef enum logic [1:0] {
         IDLE,
         READ,
+        WAIT,
         REQUEST
     } lite_dram_state_t;
 
@@ -222,16 +228,20 @@ module Wrapper #(
                 IDLE: begin
                     if(!req_fifo_empty && initialized) begin
                         req_fifo_rd_en             <= 1'b1;
-                        lite_dram_state            <= READ;
+                        lite_dram_state            <= WAIT;
                     end
                 end
 
+                WAIT: begin
+                    lite_dram_state <= READ;
+                end
+
                 READ: begin
+                    user_port_wishbone_0_adr   <= req_fifo_rdata.addr[31:7];
+                    user_port_wishbone_0_dat_w <= req_fifo_rdata.data;
                     user_port_wishbone_0_we    <= req_fifo_rdata.we;
                     user_port_wishbone_0_cyc   <= 1'b1;
                     user_port_wishbone_0_stb   <= 1'b1;
-                    user_port_wishbone_0_adr   <= req_fifo_rdata.addr[31:7];
-                    user_port_wishbone_0_dat_w <= req_fifo_rdata.data;
                     lite_dram_state            <= REQUEST;
                 end
 

@@ -65,11 +65,11 @@ module wrapper_tb ();
             fail <= 0;
             we   <= 0;
             delay_counter <= 0;
-            test_state <= TST_DELAY;
+            test_state <= TST_IDLE;
         end else begin
             case (test_state)
                 TST_IDLE: begin
-                    if(initialized) test_state <= TST_DELAY;
+                    if(initialized) test_state <= TST_WRITE;
                 end
 
                 TST_DELAY: begin
@@ -134,6 +134,9 @@ module wrapper_tb ();
     assign addr = {real_addr, 7'h0};
 
     initial begin
+        $dumpfile("build/wrapper_tb.vcd");
+        $dumpvars(0, wrapper_tb);
+        
         sys_clk_100mhz = 0;
         rst_n = 0;
 
@@ -142,7 +145,7 @@ module wrapper_tb ();
         rst_n = 1;
 
 
-        #2000;
+        #4000000;
 
         $finish;
     end

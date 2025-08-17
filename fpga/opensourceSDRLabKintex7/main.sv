@@ -114,7 +114,7 @@ module top #(
             fail <= 0;
             we   <= 0;
             delay_counter <= 0;
-            test_state <= TST_DELAY;
+            test_state <= TST_IDLE;
         end else begin
             case (test_state)
                 TST_IDLE: begin
