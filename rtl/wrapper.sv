@@ -17,8 +17,9 @@ module Wrapper #(
     input  logic [31:0]            addr_i,
     input  logic [WORD_SIZE - 1:0] data_i,
     output logic [WORD_SIZE - 1:0] data_o,
-    output logic                   ack_o,
-
+    output logic                   ack_o
+    `ifdef SYNTHESIS
+    ,
     // DRAM interface
     inout  logic [31:0] ddram_dq,
     inout  logic [3:0]  ddram_dqs_n,
@@ -35,6 +36,7 @@ module Wrapper #(
     output logic [0:0]  ddram_cs_n,
     output logic [3:0]  ddram_dm,
     output logic [0:0]  ddram_odt
+    `endif
 );
     // Control signals
     logic ddram_init_done;
@@ -56,10 +58,16 @@ module Wrapper #(
     logic user_port_wishbone_0_stb;
     logic user_port_wishbone_0_we;
 
+    `ifndef SYNTHESIS
+    assign ddram_pll_locked = 1;
+    assign ddram_init_error = 0;
+    assign ddram_init_done  = 1;
+    `endif    
+
     litedram_core u_litedram_core (
         .clk                        (sys_clk),                       // 1 bit
+        `ifdef SYNTHESIS
         .rst                        (~rst_n),                        // 1 bit
-        
         .ddram_dq                   (ddram_dq),                      // 32 bits
         .ddram_dqs_n                (ddram_dqs_n),                   // 4 bits
         .ddram_dqs_p                (ddram_dqs_p),                   // 4
@@ -75,10 +83,13 @@ module Wrapper #(
         .ddram_ras_n                (ddram_ras_n),                   // 1 bit
         .ddram_reset_n              (ddram_reset_n),                 // 1 bit
         .ddram_we_n                 (ddram_we_n),                    // 1 bit
+        .pll_locked                 (ddram_pll_locked),              // 1 bit
+        `else
+        .sim_trace                  (1),
+        `endif
+
         .init_done                  (ddram_init_done),               // 1 bit
         .init_error                 (ddram_init_error),              // 1 bit
-        .pll_locked                 (ddram_pll_locked),               // 1 bit
-        
         .user_clk                   (user_clk),                      // 1 bit
         .user_port_wishbone_0_ack   (user_port_wishbone_0_ack),      // 1 bit
         .user_port_wishbone_0_adr   (user_port_wishbone_0_adr),      // 25 bits

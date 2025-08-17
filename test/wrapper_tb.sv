@@ -1,41 +1,8 @@
-module top #(
-    parameter SYS_CLK_FREQ  = 50_000_000,  // 50 MHz
-    parameter USER_CLK_FREQ = 100_000_000, // 100 MHz
-    parameter REF_CLK_FREQ  = 200_000_000, // 200 MHz
-    parameter DRAM_CLK_FREQ = 800_000_000, // 800 MHz
-    parameter WORD_SIZE     = 256          // Word size for DRAM controller
-) (
-    input  logic        clk,
-    input  logic        rst_n,
+module wrapper_tb ();
+    localparam WORD_SIZE = 256;
 
-    output logic [7:0]  led,
-
-    // DRAM interface
-    inout  logic [31:0] ddram_dq,
-    inout  logic [3:0]  ddram_dqs_n,
-    inout  logic [3:0]  ddram_dqs_p,
-    output logic [14:0] ddram_a,
-    output logic [2:0]  ddram_ba,
-    output logic        ddram_ras_n,
-    output logic        ddram_cas_n,
-    output logic        ddram_we_n,
-    output logic        ddram_reset_n,
-    output logic [0:0]  ddram_clk_p,
-    output logic [0:0]  ddram_clk_n,
-    output logic [0:0]  ddram_cke,
-    output logic [0:0]  ddram_cs_n,
-    output logic [3:0]  ddram_dm,
-    output logic [0:0]  ddram_odt
-);
-    // PLL and clock generation
+    logic rst_n;
     logic locked, sys_clk_100mhz, initialized;
-
-    clk_wiz_0 clk_wiz_0_inst (
-        .clk_out1 (sys_clk_100mhz), // 100 MHz system clock
-        .resetn   (rst_n),          // Active low reset
-        .locked   (locked),         // Locked signal
-        .clk_in1  (clk)             // System clock - 50 MHz
-    );
 
     logic [WORD_SIZE - 1: 0] write_data, read_data;
     logic [24:0] real_addr;
@@ -43,7 +10,7 @@ module top #(
     logic cyc, stb, we, ack;
 
     Wrapper #(
-        .SYS_CLK_FREQ         (USER_CLK_FREQ),
+        .SYS_CLK_FREQ         (100_000_000),
         .WORD_SIZE            (WORD_SIZE),
         .ADDR_WIDTH           (25),
         .FIFO_DEPTH           (8)
@@ -58,23 +25,7 @@ module top #(
         .addr_i               (addr),                          // 32 bits
         .data_i               (write_data),                    // 256 bits
         .data_o               (read_data),                     // 256 bits
-        .ack_o                (ack),                           // 1 bit
-
-        .ddram_dq             (ddram_dq),                      // 32 bits
-        .ddram_dqs_n          (ddram_dqs_n),                   // 4 bits
-        .ddram_dqs_p          (ddram_dqs_p),                   // 4
-        .ddram_a              (ddram_a),                       // 15 bits
-        .ddram_ba             (ddram_ba),                      // 3 bits
-        .ddram_cas_n          (ddram_cas_n),                   // 1 bit
-        .ddram_cke            (ddram_cke),                     // 1 bit
-        .ddram_clk_n          (ddram_clk_n),                   // 1 bit
-        .ddram_clk_p          (ddram_clk_p),                   // 1 bit
-        .ddram_cs_n           (ddram_cs_n),                    // 1 bit
-        .ddram_dm             (ddram_dm),                      // 4 bits
-        .ddram_odt            (ddram_odt),                     // 1 bit
-        .ddram_ras_n          (ddram_ras_n),                   // 1 bit
-        .ddram_reset_n        (ddram_reset_n),                 // 1 bit
-        .ddram_we_n           (ddram_we_n)                     // 1 bit
+        .ack_o                (ack)                            // 1 bit
     );
 
     typedef enum logic [2:0] {
@@ -181,6 +132,21 @@ module top #(
     end
 
     assign addr = {real_addr, 7'h0};
-    assign led  = {pass, fail, 3'h0, 2'b11, initialized};
+
+    initial begin
+        sys_clk_100mhz = 0;
+        rst_n = 0;
+
+        #30
+
+        rst_n = 1;
+
+
+        #2000;
+
+        $finish;
+    end
+
+    always #10 sys_clk_100mhz <= ~sys_clk_100mhz;
 
 endmodule
