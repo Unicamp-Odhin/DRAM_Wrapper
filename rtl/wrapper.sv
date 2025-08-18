@@ -155,11 +155,12 @@ module Wrapper #(
     );
 
     // FSM - Wishbone
-    typedef enum logic [1:0] { 
+    typedef enum logic [2:0] { 
         WB_IDLE,
         WB_ACK,
         WB_WAIT,
-        WB_WBACK
+        WB_WBACK,
+        WB_CYC_WAIT
     } wb_state_t;
     
     wb_state_t req_state;
@@ -170,6 +171,7 @@ module Wrapper #(
         ack_o           <= 0;
 
         if(!rst_n) begin
+            data_o    <= 0;
             req_state <= WB_IDLE;
         end else begin
             case (req_state)
@@ -195,7 +197,13 @@ module Wrapper #(
                 WB_WBACK: begin
                     ack_o     <= 1;
                     data_o    <= resp_fifo_rdata.data;
-                    req_state <= WB_IDLE;
+                    req_state <= stb_i ? WB_CYC_WAIT : WB_IDLE;
+                end
+
+                WB_CYC_WAIT: begin
+                    if(!cyc_i) begin
+                        req_state <= WB_IDLE;
+                    end
                 end
 
                 default: req_state <= WB_IDLE;

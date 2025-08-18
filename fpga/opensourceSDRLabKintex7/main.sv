@@ -80,7 +80,6 @@ module top #(
     typedef enum logic [2:0] {
         TST_IDLE,
         TST_WRITE,
-        TST_DELAY,
         TST_WAIT_WRITE,
         TST_READ,
         TST_WAIT_READ,
@@ -93,40 +92,33 @@ module top #(
 
     localparam NUM_BYTES = WORD_SIZE / 8;
 
-    localparam TEST_VALUE = {NUM_BYTES{8'b10100101}}; // Padrão A5 repetido
-    localparam logic [255:0] TEST_VALUE1 = {32{8'hA5}};
-    localparam logic [255:0] TEST_VALUE2 = {32{8'h5A}};
-    localparam logic [255:0] TEST_VALUE3 = {32{8'hFF}};
-    localparam logic [255:0] TEST_VALUE4 = {32{8'h00}};
-    localparam logic [255:0] TEST_VALUE5 = {32{8'hF0}};
-    localparam logic [255:0] TEST_VALUE6 = {32{8'h0F}};
-    localparam logic [255:0] TEST_VALUE7 = {32{8'hAA}};
-    localparam logic [255:0] TEST_VALUE8 = {32{8'h55}};
-    localparam logic [255:0] TEST_VALUE9 = 256'hAABB_CCDD_EEFF_0011_2233_4455_6677_8899_AABB_CCDD_EEFF_0011_2233_4455_6677_8899;
+    localparam logic [WORD_SIZE - 1: 0] TEST_VALUE  = {NUM_BYTES{8'hA5}}; // Padrão A5 repetido
+    localparam logic [WORD_SIZE - 1: 0] TEST_VALUE1 = {32{8'hA5}};
+    localparam logic [WORD_SIZE - 1: 0] TEST_VALUE2 = {32{8'h5A}};
+    localparam logic [WORD_SIZE - 1: 0] TEST_VALUE3 = {32{8'hFF}};
+    localparam logic [WORD_SIZE - 1: 0] TEST_VALUE4 = {32{8'h00}};
+    localparam logic [WORD_SIZE - 1: 0] TEST_VALUE5 = {32{8'hF0}};
+    localparam logic [WORD_SIZE - 1: 0] TEST_VALUE6 = {32{8'h0F}};
+    localparam logic [WORD_SIZE - 1: 0] TEST_VALUE7 = {32{8'hAA}};
+    localparam logic [WORD_SIZE - 1: 0] TEST_VALUE8 = {32{8'h55}};
+    localparam logic [WORD_SIZE - 1: 0] TEST_VALUE9 = 256'h55BB_CCDD_EEFF_0011_2233_4455_6677_8899_AABB_CCDD_EEFF_0011_2233_4455_6677_8899;
 
     logic [WORD_SIZE - 1 : 0] test_data;
 
-    always_ff @( posedge  sys_clk_100mhz or negedge rst_n ) begin
+    always_ff @( posedge sys_clk_100mhz or negedge rst_n ) begin
         if(!rst_n) begin
             cyc  <= 0;
             stb  <= 0;
             pass <= 0;
             fail <= 0;
             we   <= 0;
+            test_data  <= 0;
             delay_counter <= 0;
             test_state <= TST_IDLE;
         end else begin
             case (test_state)
                 TST_IDLE: begin
-                    if(initialized) test_state <= TST_DELAY;
-                end
-
-                TST_DELAY: begin
-                    if(delay_counter < 1000_000_000) begin
-                        delay_counter <= delay_counter + 1;
-                    end else begin
-                        test_state <= TST_WRITE;
-                    end
+                    if(initialized) test_state <= TST_WRITE;
                 end
 
                 TST_WRITE: begin
@@ -134,9 +126,8 @@ module top #(
                     cyc        <= 1;
                     stb        <= 1;
                     we         <= 1;
-                    write_data <= TEST_VALUE9;
+                    write_data <= TEST_VALUE;
                     test_state <= TST_WAIT_WRITE;
-                    test_data  <= 0;
                 end
 
                 TST_WAIT_WRITE: begin
@@ -166,7 +157,7 @@ module top #(
                 end
 
                 TST_CHECK: begin
-                    if(test_data == TEST_VALUE9) begin
+                    if(test_data == TEST_VALUE) begin
                         pass <= 1'b1;
                         fail <= 1'b0;
                     end else begin
